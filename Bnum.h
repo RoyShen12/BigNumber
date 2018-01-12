@@ -1,13 +1,16 @@
-#pragma once
-#include "stdafx.h"
+#ifndef _BIG_NUM
+#define _BIG_NUM
+#include <iostream>
+#include <string>
+
 using namespace std;
 
 #define MAX(a,b) a>b?a:b
-// DLEN¸ö9
+// DLENä¸ª9
 #define MAXN 99999999
-// BigNum::aµÄÃ¿¸öÊý×Ö´ú±í´óÊýµÄÎ»Êý
+// BigNum::açš„æ¯ä¸ªæ•°å­—ä»£è¡¨å¤§æ•°çš„ä½æ•°
 #define DLEN 8
-// ³õÊ¼Î»Êý
+// åˆå§‹ä½æ•°
 #define A_LENGTH 10
 
 struct sizing {
@@ -164,7 +167,7 @@ inline BigNum BigNum::operator+(const BigNum & T) const
 inline BigNum& BigNum::operator++()
 {
 	this->a[len - 1]++;
-	// ½øÎ»
+	// è¿›ä½
 	if (this->a[len - 1] > MAXN) {
 		this->a.resize(this->a.size() + 1, 0);
 		this->a[len]++;
@@ -356,3 +359,4 @@ inline void BigNum::print(FILE *f) const
 	}
 	fprintf(f, "\n");
 }
+#endif
