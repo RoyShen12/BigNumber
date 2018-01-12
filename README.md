@@ -18,6 +18,7 @@ BigNum c();
 
 // precise calculating operator + - * / % both with int64_t or another BigNum('/' and '%' only support int64_t)
 // on a very fast speed.
+
 auto ans = ((((a * b + b * b * b) / 655) * b) - 12345) % 255; 
 // ans = 213 , this line only cost about 20μs.
 
