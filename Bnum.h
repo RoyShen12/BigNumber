@@ -1,11 +1,14 @@
-#ifndef _BIG_NUM
-#define _BIG_NUM
+#ifndef _BIG_NUM_
+#define _BIG_NUM_
+
+static_assert(sizeof(void *) == 8, "32-bit code generation is not supported.");
+
 #include <iostream>
 #include <string>
 
 using namespace std;
 
-#define MAX(a,b) a>b?a:b
+#define MAX(a,b) (((a)>(b))?(a):(b))
 // DLEN个9
 #define MAXN 99999999
 // BigNum::a的每个数字代表大数的位数
@@ -13,23 +16,12 @@ using namespace std;
 // 初始位数
 #define A_LENGTH 10
 
-struct sizing {
-	size_t rate = 2;
-	const size_t operator++(int) {
-		size_t old = rate;
-		rate = rate * 2;
-		// printf("sizing to %zux\n", rate);
-		return old;
-	}
-};
-
 class BigNum {
 public:
 	basic_string<int64_t> a;
 	int64_t len;
-	sizing AMPFY_RT;
+
 	BigNum() {
-		// printf("new instance ()\n");
 		len = 1;
 		a.resize(A_LENGTH, 0);
 	}
@@ -37,16 +29,17 @@ public:
 	BigNum(const char*);
 	BigNum(const BigNum &);
 	BigNum &operator = (const BigNum &);
-
+	BigNum &operator = (const int64_t &);
 	friend istream& operator>>(istream&, BigNum&);
 	friend ostream& operator<<(ostream&, BigNum&);
 
-	BigNum operator+(const BigNum &)  const;
+	BigNum operator+(const BigNum &)    const;
 	BigNum& operator++();
 	const BigNum operator++(int);
-	BigNum operator-(const BigNum &)  const;
-	BigNum operator*(const BigNum &)  const;
-	BigNum operator/(const int64_t &) const;
+	BigNum operator-(const BigNum &)    const;
+	BigNum operator-()		    const;
+	BigNum operator*(const BigNum &)    const;
+	BigNum operator/(const int64_t &)   const;
 
 	BigNum operator^(const BigNum &)    const;
 	int64_t operator%(const int64_t &)  const;  
@@ -55,12 +48,13 @@ public:
 	bool   operator==(const BigNum & T) const;
 	BigNum operator!() const;
 
+	size_t digit() const;
+
 	void print() const;
 	void print(FILE *f) const;
 };
 inline BigNum::BigNum(const int64_t b)
 {
-	// printf("new instance (int64_t)\n");
 	int64_t c, d = b;
 	len = 0;
 	a.resize(A_LENGTH, 0);
@@ -71,44 +65,44 @@ inline BigNum::BigNum(const int64_t b)
 	}
 	a[len++] = d;
 }
-inline BigNum::BigNum(const char*s)
+inline BigNum::BigNum(const char *s)
 {
-	// printf("new instance (const char*s)\n");
 	int64_t t, k, index, l, i;
 	l = strlen(s);
-	a.resize(MAX(l / DLEN + 4, A_LENGTH), 0);
-	len = l / DLEN;
-	if (l % DLEN)
-		len++;
-	index = 0;
-	for (i = l - 1; i >= 0; i -= DLEN) {
-		t = 0;
-		k = i - DLEN + 1;
-		if (k < 0)
-			k = 0;
-		for (int64_t j = k; j <= i; j++)
-			t = t * 10 + s[j] - '0';
-		a[index++] = t;
+	if (l == 0) {
+		len = 1;
+		a.resize(A_LENGTH, 0);
+	}
+	else {
+		a.resize(MAX(l / DLEN + 4, A_LENGTH), 0);
+		len = l / DLEN;
+		if (l % DLEN)
+			len++;
+		index = 0;
+		for (i = l - 1; i >= 0; i -= DLEN) {
+			t = 0;
+			k = i - DLEN + 1;
+			if (k < 0)
+				k = 0;
+			for (int64_t j = k; j <= i; j++)
+				t = t * 10 + s[j] - '0';
+			a[index++] = t;
+		}
 	}
 }
 inline BigNum::BigNum(const BigNum & T) : len(T.len)
 {
-	// printf("new instance (const BigNum & T)\n");
-	/*int64_t i;
-	a.resize(MAX(len, A_LENGTH), 0);
-	for (i = 0; i < len; i++)
-		a[i] = T.a[i];*/
 	a = T.a;
 }
 inline BigNum &BigNum::operator=(const BigNum & n)
 {
-	// printf("new instance =\n");
-	//int64_t i;
 	len = n.len;
 	a = n.a;
-	/*a.resize(MAX(len, A_LENGTH), 0);
-	for (i = 0; i < len; i++)
-		a[i] = n.a[i];*/
+	return *this;
+}
+inline BigNum & BigNum::operator=(const int64_t &n)
+{
+	*this = BigNum(n);
 	return *this;
 }
 inline istream& operator>>(istream & in, BigNum & b)
@@ -137,7 +131,6 @@ inline ostream& operator<<(ostream& out, BigNum& b)
 	int64_t i;
 	out << b.a[b.len - 1];
 	for (i = b.len - 2; i >= 0; i--) {
-		//printf("\nloop: %lld,value: %lld\n", i, b.a[i]);
 		out.width(DLEN);
 		out.fill('0');
 		out << b.a[i];
@@ -166,13 +159,10 @@ inline BigNum BigNum::operator+(const BigNum & T) const
 }
 inline BigNum& BigNum::operator++()
 {
-	this->a[len - 1]++;
-	// 进位
-	if (this->a[len - 1] > MAXN) {
-		this->a.resize(this->a.size() + 1, 0);
-		this->a[len]++;
-		this->a[len - 1] -= MAXN + 1;
-	}
+	if ((this->a[0] + 1) < MAXN)
+		this->a[0]++;
+	else
+		*this = *this + 1;
 	return (*this);
 }
 inline const BigNum BigNum::operator++(int)
@@ -183,25 +173,43 @@ inline const BigNum BigNum::operator++(int)
 }
 inline BigNum BigNum::operator-(const BigNum & T) const
 {
+	if (T == 1i64) {
+		BigNum t(*this);
+		if (t == 1i64) // 1-1
+			t = 0;
+		else if (t == 0i64) // 0-1
+			t = -1;
+		else if (t < 0i64) { // x=x-1 => x=-(-x+1)
+			t = -(++(-t));
+		}
+		else
+			goto normal_cal;
+		return move(t);
+	}
+	normal_cal:
 	int64_t i, j, big;
 	bool flag;
 	BigNum t1, t2;
 	if (*this > T) {
 		t1 = *this;
 		t2 = T;
-		flag = 0;
+		flag = false;
 	}
 	else {
 		t1 = T;
 		t2 = *this;
-		flag = 1;
+		flag = true;
 	}
-	big = t1.len;
-	// resize t2 to {big}
+	big = MAX(t1.len, t2.len);
 	t2.a.resize(MAX(t1.len, t2.len), 0);
+	t1.a.resize(MAX(t1.len, t2.len), 0);
 	for (i = 0; i < big; i++) {
 		if (t1.a[i] < t2.a[i]) {
 			j = i + 1;
+#ifdef _DEBUG
+			auto db = t1.a.size();
+			auto db2 = t1.a[j];
+#endif
 			while (t1.a[j] == 0)
 				j++;
 			t1.a[j--]--;
@@ -222,17 +230,25 @@ inline BigNum BigNum::operator-(const BigNum & T) const
 	return move(t1);
 }
 
+inline BigNum BigNum::operator-() const
+{
+	BigNum ret(*this);
+	ret.a[len - 1] *= -1;
+	return move(ret);
+}
+
 inline BigNum BigNum::operator*(const BigNum & T) const
 {
 	BigNum ret;
-	int64_t i, j, up;
+	int64_t up;
+	size_t i, j = 0;
 	int64_t temp, temp1;
 	for (i = 0; i < len; i++) {
 		up = 0;
 		for (j = 0; j < T.len; j++) {
 			// dynamic 2x resizing
 			while (ret.a.size() <= (i + j))
-				ret.a.resize(ret.AMPFY_RT++ * ret.a.size(), 0);
+				ret.a.resize(2 * ret.a.size(), 0);
 			temp = a[i] * T.a[j] + ret.a[i + j] + up;
 			if (temp > MAXN) {
 				temp1 = temp - temp / (MAXN + 1) * (MAXN + 1);
@@ -247,13 +263,13 @@ inline BigNum BigNum::operator*(const BigNum & T) const
 		if (up != 0) {
 			// dynamic 2x resizing
 			while (ret.a.size() <= (i + j))
-				ret.a.resize(ret.AMPFY_RT++ * ret.a.size(), 0);
+				ret.a.resize(2 * ret.a.size(), 0);
 			ret.a[i + j] = up;
 		}
 	}
 	ret.len = i + j;
 	while (ret.a.size() <= (i + j))
-		ret.a.resize(ret.AMPFY_RT++ * ret.a.size(), 0);
+		ret.a.resize(2 * ret.a.size(), 0);
 	while (ret.a[ret.len - 1] == 0 && ret.len > 1)
 		ret.len--;
 	return move(ret);
@@ -286,6 +302,9 @@ inline BigNum BigNum::operator^(const BigNum &n) const
 	if (*this == 1) {
 		return BigNum(1);
 	}
+	if (n == 1) {
+		return (*this);
+	}
 	BigNum t, ret(1);
 	int64_t i;
 	BigNum m(n);
@@ -303,20 +322,51 @@ inline BigNum BigNum::operator^(const BigNum &n) const
 }
 inline bool BigNum::operator>(const BigNum & T) const
 {
-	int64_t ln;
-	if (len > T.len)
-		return true;
-	else if (len == T.len) {
-		ln = len - 1;
-		while (a[ln] == T.a[ln] && ln > 0)
-			ln--;
-		if (ln >= 0 && a[ln] > T.a[ln])
+	if (a[len - 1] < 0) {
+		if (T.a[len - 1] > 0)
+			return false;
+		// all negative
+		else {
+			if (len > T.len) {
+				return false;
+			}
+			else if (len == T.len) {
+				// a[len - 1] < 0, a[n<len-1] > 0
+				if (a[len - 1] > T.a[len - 1])
+					return true;
+				else if (a[len - 1] == T.a[len - 1]) {
+					for (int64_t ln = len - 2; ln >= 0; ln--) {
+						if (a[ln] > T.a[ln])
+							return false;
+						else
+							return true;
+					}
+				}
+				else
+					return false;
+			}
+			else
+				return true;
+		}
+	}
+	else {
+		if (T.a[len - 1] < 0)
 			return true;
+		int64_t ln;
+		if (len > T.len) {
+			return true;
+		}
+		else if (len == T.len) {
+			for (ln = len - 1; ln >= 0; ln--) {
+				if (a[ln] > T.a[ln])
+					return true;
+				else
+					return false;
+			}
+		}
 		else
 			return false;
 	}
-	else
-		return false;
 }
 
 
@@ -327,7 +377,16 @@ inline bool BigNum::operator<(const BigNum & T) const
 
 inline bool BigNum::operator==(const BigNum & T) const
 {
-	return this->len == T.len && this->a == T.a;
+	if (len != T.len) {
+		return false;
+	}
+	else {
+		for (int index = len - 1; index >= 0; index--) {
+			if (a[index] != T.a[index])
+				return false;
+		}
+		return true;
+	}
 }
 
 inline BigNum BigNum::operator!() const
@@ -338,6 +397,17 @@ inline BigNum BigNum::operator!() const
 		n = n - 1;
 	}
 	return move(ret);
+}
+
+inline size_t BigNum::digit() const
+{
+	size_t index = 0;
+	auto tmp = a[len - 1];
+	while (tmp) {
+		tmp = tmp / 10;
+		index++;
+	}
+	return index + DLEN * (len - 1);
 }
 
 inline void BigNum::print() const
@@ -359,4 +429,5 @@ inline void BigNum::print(FILE *f) const
 	}
 	fprintf(f, "\n");
 }
+
 #endif
