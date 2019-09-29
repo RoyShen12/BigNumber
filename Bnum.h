@@ -1,3 +1,8 @@
+/**
+ * 
+ * 
+ */
+
 #ifndef _BIG_NUM_
 #define _BIG_NUM_
 
@@ -9,12 +14,17 @@ static_assert(sizeof(void *) == 8, "32-bit code generation is not supported.");
 using namespace std;
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
+
 // DLEN个9
 #define MAXN 99999999
-// BigNum::a的每个数字代表大数的位数
+
+// BigNum::a 的每个数字代表大数的位数
 #define DLEN 8
+
 // 初始位数
 #define A_LENGTH 10
+
+#define _DEBUG
 
 class BigNum {
 public:
@@ -26,7 +36,7 @@ public:
 		a.resize(A_LENGTH, 0);
 	}
 	BigNum(const int64_t);
-	BigNum(const char*);
+	BigNum(const string&);
 	BigNum(const BigNum &);
 	BigNum &operator = (const BigNum &);
 	BigNum &operator = (const int64_t &);
@@ -46,13 +56,16 @@ public:
 	bool   operator>(const BigNum & T)  const;
 	bool   operator<(const BigNum & T)  const;
 	bool   operator==(const BigNum & T) const;
+	bool   operator!=(const BigNum & T) const;
 	BigNum operator!() const;
 
 	size_t digit() const;
 
 	void print() const;
 	void print(FILE *f) const;
+	string to_string() const;
 };
+
 inline BigNum::BigNum(const int64_t b)
 {
 	int64_t c, d = b;
@@ -65,10 +78,11 @@ inline BigNum::BigNum(const int64_t b)
 	}
 	a[len++] = d;
 }
-inline BigNum::BigNum(const char *s)
+
+inline BigNum::BigNum(const string& s)
 {
 	int64_t t, k, index, l, i;
-	l = strlen(s);
+	l = s.length();
 	if (l == 0) {
 		len = 1;
 		a.resize(A_LENGTH, 0);
@@ -90,21 +104,25 @@ inline BigNum::BigNum(const char *s)
 		}
 	}
 }
+
 inline BigNum::BigNum(const BigNum & T) : len(T.len)
 {
 	a = T.a;
 }
+
 inline BigNum &BigNum::operator=(const BigNum & n)
 {
 	len = n.len;
 	a = n.a;
 	return *this;
 }
+
 inline BigNum & BigNum::operator=(const int64_t &n)
 {
 	*this = BigNum(n);
 	return *this;
 }
+
 inline istream& operator>>(istream & in, BigNum & b)
 {
 	string ch;
@@ -124,8 +142,8 @@ inline istream& operator>>(istream & in, BigNum & b)
 	}
 	b.len = count++;
 	return in;
-
 }
+
 inline ostream& operator<<(ostream& out, BigNum& b)
 {
 	int64_t i;
@@ -137,6 +155,7 @@ inline ostream& operator<<(ostream& out, BigNum& b)
 	}
 	return out;
 }
+
 inline BigNum BigNum::operator+(const BigNum & T) const
 {
 	BigNum t(*this);
@@ -157,6 +176,7 @@ inline BigNum BigNum::operator+(const BigNum & T) const
 		t.len = big;
 	return move(t);
 }
+
 inline BigNum& BigNum::operator++()
 {
 	if ((this->a[0] + 1) < MAXN)
@@ -165,21 +185,23 @@ inline BigNum& BigNum::operator++()
 		*this = *this + 1;
 	return (*this);
 }
+
 inline const BigNum BigNum::operator++(int)
 {
 	BigNum old(*this);
 	++(*this);
 	return move(old);
 }
+
 inline BigNum BigNum::operator-(const BigNum & T) const
 {
-	if (T == 1i64) {
+	if (T == 1LL) {
 		BigNum t(*this);
-		if (t == 1i64) // 1-1
+		if (t == 1LL) // 1-1
 			t = 0;
-		else if (t == 0i64) // 0-1
+		else if (t == 0LL) // 0-1
 			t = -1;
-		else if (t < 0i64) { // x=x-1 => x=-(-x+1)
+		else if (t < 0LL) { // x=x-1 => x=-(-x+1)
 			t = -(++(-t));
 		}
 		else
@@ -274,6 +296,7 @@ inline BigNum BigNum::operator*(const BigNum & T) const
 		ret.len--;
 	return move(ret);
 }
+
 inline BigNum BigNum::operator/(const int64_t & b) const
 {
 	BigNum ret;
@@ -289,6 +312,7 @@ inline BigNum BigNum::operator/(const int64_t & b) const
 		ret.len--;
 	return move(ret);
 }
+
 inline int64_t BigNum::operator %(const int64_t & b) const
 {
 	int64_t i, d = 0;
@@ -297,6 +321,7 @@ inline int64_t BigNum::operator %(const int64_t & b) const
 	}
 	return d;
 }
+
 inline BigNum BigNum::operator^(const BigNum &n) const
 {
 	if (*this == 1) {
@@ -320,6 +345,7 @@ inline BigNum BigNum::operator^(const BigNum &n) const
 	}
 	return move(ret);
 }
+
 inline bool BigNum::operator>(const BigNum & T) const
 {
 	if (a[len - 1] < 0) {
@@ -369,7 +395,6 @@ inline bool BigNum::operator>(const BigNum & T) const
 	}
 }
 
-
 inline bool BigNum::operator<(const BigNum & T) const
 {
 	return !((*this) > T || (*this) == T);
@@ -387,6 +412,11 @@ inline bool BigNum::operator==(const BigNum & T) const
 		}
 		return true;
 	}
+}
+
+inline bool BigNum::operator!=(const BigNum & T) const
+{
+	return !(*this == T);
 }
 
 inline BigNum BigNum::operator!() const
@@ -428,6 +458,15 @@ inline void BigNum::print(FILE *f) const
 		fprintf(f, "%08lld", a[i]);
 	}
 	fprintf(f, "\n");
+}
+
+inline string BigNum::to_string() const
+{
+	string r = std::to_string(a[len - 1]);
+	for (int64_t i = len - 2; i >= 0; i--) {
+		r.append(std::to_string(a[i]));
+	}
+	return r;
 }
 
 #endif
